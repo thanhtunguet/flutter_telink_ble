@@ -68,3 +68,8 @@ This is a Flutter plugin project that provides Telink BLE device support for Flu
 - Implement proper stream controllers for continuous data
 - Use isolates for heavy BLE data processing if needed
 - Follow Flutter plugin boilerplate structure
+
+## Miscellaneous
+- Never commit your changes. Let user do it manually.
+- Never set you as co-author.
+- Update project plan to mark things have been done whenever make a change.
