@@ -64,7 +64,7 @@ class ConnectionManager(private val meshService: MeshService) {
         handler.postDelayed({
             try {
                 Log.d(TAG, "Attempting to reconnect...")
-                val connectParams = com.telink.ble.mesh.foundation.parameter.AutoConnectParameters.getDefault()
+                val connectParams = com.telink.ble.mesh.foundation.parameter.AutoConnectParameters()
                 meshService.autoConnect(connectParams)
 
                 // Wait for connection result

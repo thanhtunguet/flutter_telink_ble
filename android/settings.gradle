@@ -1,3 +1,3 @@
 rootProject.name = 'flutter_telink_ble'
 include ':TelinkBleMeshLib'
-project(':TelinkBleMeshLib').projectDir = new File('../TelinkBleMeshLib')
+project(':TelinkBleMeshLib').projectDir = new File(settingsDir, '../TelinkBleMeshLib')

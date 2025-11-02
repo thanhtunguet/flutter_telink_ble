@@ -199,7 +199,14 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
         return
       }
 
-      val provisioningParams = ProvisioningParameters.getDefault(address, parseUUID(uuid))
+      // Create a provisioning device using constructor
+      val provisioningDevice = com.telink.ble.mesh.entity.ProvisioningDevice(
+        null, // BluetoothDevice - will be set during scan
+        parseUUID(uuid),
+        address
+      )
+
+      val provisioningParams = ProvisioningParameters(provisioningDevice)
       meshService.startProvisioning(provisioningParams)
 
       Log.d(TAG, "Provisioning started for address: $address")
@@ -212,7 +219,7 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
 
   private fun connectToMesh(call: MethodCall, result: Result) {
     try {
-      val connectParams = AutoConnectParameters.getDefault()
+      val connectParams = AutoConnectParameters()
       meshService.autoConnect(connectParams)
 
       Log.d(TAG, "Auto connect started")
@@ -225,7 +232,7 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
 
   private fun disconnectFromMesh(result: Result) {
     try {
-      meshService.disconnect()
+      meshService.idle(true)
       Log.d(TAG, "Disconnected from mesh")
       result.success(null)
     } catch (e: Exception) {
@@ -313,10 +320,13 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
         return
       }
 
-      val otaParams = com.telink.ble.mesh.foundation.parameter.GattOtaParameters()
-      otaParams.firmwareData = firmwareData
-      otaParams.connectionAddress = deviceAddress
+      // Create connection filter for the target device
+      val connectionFilter = com.telink.ble.mesh.entity.ConnectionFilter(
+        com.telink.ble.mesh.entity.ConnectionFilter.TYPE_MESH_ADDRESS,
+        deviceAddress
+      )
 
+      val otaParams = com.telink.ble.mesh.foundation.parameter.GattOtaParameters(connectionFilter, firmwareData)
       meshService.startGattOta(otaParams)
 
       Log.d(TAG, "OTA started for device: $deviceAddress, firmware size: ${firmwareData.size}")
@@ -329,7 +339,7 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
 
   private fun stopOTA(result: Result) {
     try {
-      meshService.stopGattOta()
+      meshService.stopMeshOta()
       Log.d(TAG, "OTA stopped")
       result.success(null)
     } catch (e: Exception) {
@@ -354,10 +364,14 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
         return
       }
 
-      val message = com.telink.ble.mesh.core.message.config.ModelSubscriptionAddMessage(deviceAddress)
-      message.elementAddress = deviceAddress
-      message.subscriptionAddress = groupAddress
-      message.modelId = 0x1000 // Generic OnOff Server model
+      val message = com.telink.ble.mesh.core.message.config.ModelSubscriptionSetMessage.getSimple(
+        deviceAddress,
+        com.telink.ble.mesh.core.message.config.ModelSubscriptionSetMessage.MODE_ADD,
+        deviceAddress,
+        groupAddress,
+        0x1000, // Generic OnOff Server model
+        true    // isSig
+      )
 
       val sent = meshService.sendMeshMessage(message)
 
@@ -385,10 +399,14 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
         return
       }
 
-      val message = com.telink.ble.mesh.core.message.config.ModelSubscriptionDeleteMessage(deviceAddress)
-      message.elementAddress = deviceAddress
-      message.subscriptionAddress = groupAddress
-      message.modelId = 0x1000 // Generic OnOff Server model
+      val message = com.telink.ble.mesh.core.message.config.ModelSubscriptionSetMessage.getSimple(
+        deviceAddress,
+        com.telink.ble.mesh.core.message.config.ModelSubscriptionSetMessage.MODE_DELETE,
+        deviceAddress,
+        groupAddress,
+        0x1000, // Generic OnOff Server model
+        true    // isSig
+      )
 
       val sent = meshService.sendMeshMessage(message)
 
@@ -508,9 +526,10 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
     // Set app keys
     val appKeys = config["appKeys"] as? Map<Int, String>
     if (appKeys != null && appKeys.isNotEmpty()) {
-      val firstAppKey = appKeys.values.first()
-      meshConfig.appKeyIndex = appKeys.keys.first()
-      meshConfig.appKey = hexStringToByteArray(firstAppKey)
+      meshConfig.appKeyMap = android.util.SparseArray()
+      appKeys.forEach { (index, key) ->
+        meshConfig.appKeyMap.put(index, hexStringToByteArray(key))
+      }
     }
 
     // Set other parameters

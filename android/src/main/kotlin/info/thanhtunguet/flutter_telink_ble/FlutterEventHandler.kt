@@ -9,14 +9,14 @@ import io.flutter.plugin.common.EventChannel
  * Event handler for Telink Mesh events
  * Bridges native mesh events to Flutter event streams
  */
-class FlutterEventHandler : EventHandler<String> {
+class FlutterEventHandler : EventHandler {
 
     var scanEventSink: EventChannel.EventSink? = null
     var connectionEventSink: EventChannel.EventSink? = null
     var otaEventSink: EventChannel.EventSink? = null
     var messageEventSink: EventChannel.EventSink? = null
 
-    override fun onEventPub(event: Event<String>) {
+    override fun onEventHandle(event: Event<String>) {
         when (event) {
             is ScanEvent -> handleScanEvent(event)
             is ProvisioningEvent -> handleProvisioningEvent(event)
@@ -36,17 +36,13 @@ class FlutterEventHandler : EventHandler<String> {
     private fun handleScanEvent(event: ScanEvent) {
         when (event.type) {
             ScanEvent.EVENT_TYPE_DEVICE_FOUND -> {
-                event.advertisingDevice?.let { device ->
+                event.getAdvertisingDevice()?.let { device ->
                     scanEventSink?.success(mapOf(
                         "type" to "deviceFound",
                         "device" to mapOf(
                             "name" to (device.device?.name ?: "Unknown"),
                             "macAddress" to device.device?.address,
-                            "rssi" to device.rssi,
-                            "deviceUuid" to device.deviceUUID?.toString(),
-                            "meshUuid" to device.meshUUID?.toString(),
-                            "oob" to device.oob,
-                            "productUUID" to device.productUUID
+                            "rssi" to device.rssi
                         )
                     ))
                 }
@@ -72,26 +68,27 @@ class FlutterEventHandler : EventHandler<String> {
     private fun handleProvisioningEvent(event: ProvisioningEvent) {
         messageEventSink?.success(mapOf(
             "type" to "provisioning",
-            "state" to event.state.toString(),
-            "desc" to event.desc
+            "eventType" to event.type,
+            "desc" to event.getDesc()
         ))
     }
 
     private fun handleBindingEvent(event: BindingEvent) {
         messageEventSink?.success(mapOf(
             "type" to "binding",
-            "state" to event.state.toString(),
-            "desc" to event.desc
+            "eventType" to event.type,
+            "desc" to event.getDesc()
         ))
     }
 
     private fun handleStatusNotificationEvent(event: StatusNotificationEvent) {
+        val notification = event.getNotificationMessage()
         messageEventSink?.success(mapOf(
             "type" to "statusNotification",
-            "src" to event.notification.src,
-            "dst" to event.notification.dst,
-            "opcode" to event.notification.opcode,
-            "params" to event.notification.params?.let {
+            "src" to notification.src,
+            "dst" to notification.dst,
+            "opcode" to notification.opcode,
+            "params" to notification.params?.let {
                 android.util.Base64.encodeToString(it, android.util.Base64.NO_WRAP)
             }
         ))
@@ -102,29 +99,27 @@ class FlutterEventHandler : EventHandler<String> {
             MeshEvent.EVENT_TYPE_DISCONNECTED -> {
                 connectionEventSink?.success(mapOf(
                     "state" to "disconnected",
-                    "desc" to event.desc
-                ))
-            }
-            MeshEvent.EVENT_TYPE_CONNECT_SUCCESS -> {
-                connectionEventSink?.success(mapOf(
-                    "state" to "connected",
-                    "desc" to event.desc
-                ))
-            }
-            MeshEvent.EVENT_TYPE_CONNECT_FAIL -> {
-                connectionEventSink?.success(mapOf(
-                    "state" to "connectFail",
-                    "desc" to event.desc
+                    "desc" to event.getDesc()
                 ))
             }
         }
     }
 
     private fun handleConnectionEvent(event: GattConnectionEvent) {
-        connectionEventSink?.success(mapOf(
-            "state" to event.state.toString(),
-            "desc" to event.desc
-        ))
+        when (event.type) {
+            GattConnectionEvent.EVENT_TYPE_CONNECT_SUCCESS -> {
+                connectionEventSink?.success(mapOf(
+                    "state" to "connected",
+                    "desc" to event.getDesc()
+                ))
+            }
+            GattConnectionEvent.EVENT_TYPE_CONNECT_FAIL -> {
+                connectionEventSink?.success(mapOf(
+                    "state" to "connectFail",
+                    "desc" to event.getDesc()
+                ))
+            }
+        }
     }
 
     private fun handleOtaEvent(event: GattOtaEvent) {
