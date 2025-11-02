@@ -108,6 +108,14 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
       "sendOnOffCommand" -> sendOnOffCommand(call, result)
       "sendLevelCommand" -> sendLevelCommand(call, result)
       "sendColorTemperatureCommand" -> sendColorTemperatureCommand(call, result)
+      "startOTA" -> startOTA(call, result)
+      "stopOTA" -> stopOTA(result)
+      "addDeviceToGroup" -> addDeviceToGroup(call, result)
+      "removeDeviceFromGroup" -> removeDeviceFromGroup(call, result)
+      "createGroup" -> createGroup(call, result)
+      "deleteGroup" -> deleteGroup(call, result)
+      "saveMeshConfiguration" -> saveMeshConfiguration(call, result)
+      "loadMeshConfiguration" -> loadMeshConfiguration(result)
       else -> {
         result.notImplemented()
       }
@@ -286,6 +294,204 @@ class FlutterTelinkBlePlugin: FlutterPlugin, MethodCallHandler {
     } catch (e: Exception) {
       Log.e(TAG, "Failed to send color temperature command", e)
       result.error("COMMAND_ERROR", "Failed to send command: ${e.message}", null)
+    }
+  }
+
+  private fun startOTA(call: MethodCall, result: Result) {
+    try {
+      val params = call.arguments as? Map<String, Any>
+      if (params == null) {
+        result.error("INVALID_ARGUMENT", "OTA parameters are required", null)
+        return
+      }
+
+      val deviceAddress = params["deviceAddress"] as? Int
+      val firmwareData = params["firmwareData"] as? ByteArray
+
+      if (deviceAddress == null || firmwareData == null) {
+        result.error("INVALID_ARGUMENT", "Device address and firmware data are required", null)
+        return
+      }
+
+      val otaParams = com.telink.ble.mesh.foundation.parameter.GattOtaParameters()
+      otaParams.firmwareData = firmwareData
+      otaParams.connectionAddress = deviceAddress
+
+      meshService.startGattOta(otaParams)
+
+      Log.d(TAG, "OTA started for device: $deviceAddress, firmware size: ${firmwareData.size}")
+      result.success(null)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to start OTA", e)
+      result.error("OTA_ERROR", "Failed to start OTA: ${e.message}", null)
+    }
+  }
+
+  private fun stopOTA(result: Result) {
+    try {
+      meshService.stopGattOta()
+      Log.d(TAG, "OTA stopped")
+      result.success(null)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to stop OTA", e)
+      result.error("OTA_ERROR", "Failed to stop OTA: ${e.message}", null)
+    }
+  }
+
+  private fun addDeviceToGroup(call: MethodCall, result: Result) {
+    try {
+      val params = call.arguments as? Map<String, Any>
+      if (params == null) {
+        result.error("INVALID_ARGUMENT", "Parameters are required", null)
+        return
+      }
+
+      val deviceAddress = params["deviceAddress"] as? Int
+      val groupAddress = params["groupAddress"] as? Int
+
+      if (deviceAddress == null || groupAddress == null) {
+        result.error("INVALID_ARGUMENT", "Device address and group address are required", null)
+        return
+      }
+
+      val message = com.telink.ble.mesh.core.message.config.ModelSubscriptionAddMessage(deviceAddress)
+      message.elementAddress = deviceAddress
+      message.subscriptionAddress = groupAddress
+      message.modelId = 0x1000 // Generic OnOff Server model
+
+      val sent = meshService.sendMeshMessage(message)
+
+      Log.d(TAG, "Add device $deviceAddress to group $groupAddress: $sent")
+      result.success(sent)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to add device to group", e)
+      result.error("GROUP_ERROR", "Failed to add device to group: ${e.message}", null)
+    }
+  }
+
+  private fun removeDeviceFromGroup(call: MethodCall, result: Result) {
+    try {
+      val params = call.arguments as? Map<String, Any>
+      if (params == null) {
+        result.error("INVALID_ARGUMENT", "Parameters are required", null)
+        return
+      }
+
+      val deviceAddress = params["deviceAddress"] as? Int
+      val groupAddress = params["groupAddress"] as? Int
+
+      if (deviceAddress == null || groupAddress == null) {
+        result.error("INVALID_ARGUMENT", "Device address and group address are required", null)
+        return
+      }
+
+      val message = com.telink.ble.mesh.core.message.config.ModelSubscriptionDeleteMessage(deviceAddress)
+      message.elementAddress = deviceAddress
+      message.subscriptionAddress = groupAddress
+      message.modelId = 0x1000 // Generic OnOff Server model
+
+      val sent = meshService.sendMeshMessage(message)
+
+      Log.d(TAG, "Remove device $deviceAddress from group $groupAddress: $sent")
+      result.success(sent)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to remove device from group", e)
+      result.error("GROUP_ERROR", "Failed to remove device from group: ${e.message}", null)
+    }
+  }
+
+  private fun createGroup(call: MethodCall, result: Result) {
+    try {
+      val params = call.arguments as? Map<String, Any>
+      if (params == null) {
+        result.error("INVALID_ARGUMENT", "Parameters are required", null)
+        return
+      }
+
+      val groupAddress = params["groupAddress"] as? Int
+      val groupName = params["groupName"] as? String ?: "Group"
+
+      if (groupAddress == null) {
+        result.error("INVALID_ARGUMENT", "Group address is required", null)
+        return
+      }
+
+      // Group creation is typically handled at the application level
+      // Here we just validate and return success
+      Log.d(TAG, "Group created: $groupName with address $groupAddress")
+      result.success(true)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to create group", e)
+      result.error("GROUP_ERROR", "Failed to create group: ${e.message}", null)
+    }
+  }
+
+  private fun deleteGroup(call: MethodCall, result: Result) {
+    try {
+      val params = call.arguments as? Map<String, Any>
+      if (params == null) {
+        result.error("INVALID_ARGUMENT", "Parameters are required", null)
+        return
+      }
+
+      val groupAddress = params["groupAddress"] as? Int
+
+      if (groupAddress == null) {
+        result.error("INVALID_ARGUMENT", "Group address is required", null)
+        return
+      }
+
+      // Group deletion is typically handled at the application level
+      Log.d(TAG, "Group deleted: $groupAddress")
+      result.success(true)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to delete group", e)
+      result.error("GROUP_ERROR", "Failed to delete group: ${e.message}", null)
+    }
+  }
+
+  private fun saveMeshConfiguration(call: MethodCall, result: Result) {
+    try {
+      val config = call.arguments as? Map<String, Any>
+      if (config == null) {
+        result.error("INVALID_ARGUMENT", "Configuration is required", null)
+        return
+      }
+
+      // Save configuration to SharedPreferences
+      val prefs = context.getSharedPreferences("mesh_config", Context.MODE_PRIVATE)
+      val editor = prefs.edit()
+
+      config.forEach { (key, value) ->
+        when (value) {
+          is String -> editor.putString(key, value)
+          is Int -> editor.putInt(key, value)
+          is Boolean -> editor.putBoolean(key, value)
+          is Long -> editor.putLong(key, value)
+          is Float -> editor.putFloat(key, value)
+        }
+      }
+
+      editor.apply()
+
+      Log.d(TAG, "Mesh configuration saved")
+      result.success(true)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to save mesh configuration", e)
+      result.error("STORAGE_ERROR", "Failed to save configuration: ${e.message}", null)
+    }
+  }
+
+  private fun loadMeshConfiguration(result: Result) {
+    try {
+      val prefs = context.getSharedPreferences("mesh_config", Context.MODE_PRIVATE)
+      val config = prefs.all
+
+      Log.d(TAG, "Mesh configuration loaded: ${config.size} entries")
+      result.success(config)
+    } catch (e: Exception) {
+      Log.e(TAG, "Failed to load mesh configuration", e)
+      result.error("STORAGE_ERROR", "Failed to load configuration: ${e.message}", null)
     }
   }
 

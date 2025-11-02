@@ -1,11 +1,11 @@
 name: flutter_telink_ble
 description: "A new Flutter project."
 version: 0.0.1
-homepage:
+homepage: https://github.com/thanhtunguet/flutter_telink_ble
 
 environment:
   sdk: ^3.6.2
-  flutter: '>=3.3.0'
+  flutter: ">=3.3.0"
 
 dependencies:
   flutter:

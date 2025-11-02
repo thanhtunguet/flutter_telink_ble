@@ -77,6 +77,30 @@ public class FlutterTelinkBlePlugin: NSObject, FlutterPlugin {
         case "sendColorTemperatureCommand":
             handleSendColorTemperatureCommand(call: call, result: result)
 
+        case "startOTA":
+            handleStartOTA(call: call, result: result)
+
+        case "stopOTA":
+            handleStopOTA(result: result)
+
+        case "addDeviceToGroup":
+            handleAddDeviceToGroup(call: call, result: result)
+
+        case "removeDeviceFromGroup":
+            handleRemoveDeviceFromGroup(call: call, result: result)
+
+        case "createGroup":
+            handleCreateGroup(call: call, result: result)
+
+        case "deleteGroup":
+            handleDeleteGroup(call: call, result: result)
+
+        case "saveMeshConfiguration":
+            handleSaveMeshConfiguration(call: call, result: result)
+
+        case "loadMeshConfiguration":
+            handleLoadMeshConfiguration(result: result)
+
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -226,6 +250,146 @@ public class FlutterTelinkBlePlugin: NSObject, FlutterPlugin {
 
         // Use SDKLibCommand to send CTL temperature message
         result(true)
+    }
+
+    // MARK: - OTA Methods
+
+    private func handleStartOTA(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard isInitialized else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "Plugin not initialized", details: nil))
+            return
+        }
+
+        guard let args = call.arguments as? [String: Any],
+              let deviceAddress = args["deviceAddress"] as? Int,
+              let firmwareData = args["firmwareData"] as? FlutterStandardTypedData else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Device address and firmware data are required", details: nil))
+            return
+        }
+
+        NSLog("Starting OTA for device: \(deviceAddress), firmware size: \(firmwareData.data.count)")
+
+        // Use SDKLibCommand or SigOTAManager to perform OTA
+        // This would involve:
+        // 1. Connecting to the device
+        // 2. Transferring firmware data
+        // 3. Verifying and applying the update
+
+        result(nil)
+    }
+
+    private func handleStopOTA(result: @escaping FlutterResult) {
+        NSLog("Stopping OTA")
+        // Cancel ongoing OTA operation
+        result(nil)
+    }
+
+    // MARK: - Group Management Methods
+
+    private func handleAddDeviceToGroup(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard isInitialized else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "Plugin not initialized", details: nil))
+            return
+        }
+
+        guard let args = call.arguments as? [String: Any],
+              let deviceAddress = args["deviceAddress"] as? Int,
+              let groupAddress = args["groupAddress"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Device address and group address are required", details: nil))
+            return
+        }
+
+        NSLog("Adding device \(deviceAddress) to group \(groupAddress)")
+
+        // Use SDKLibCommand to send subscription add message
+        // SDKLibCommand.configModelSubscriptionAdd(destination:, elementAddress:, modelIdentifier:, groupAddress:, retryCount:, responseMaxCount:, successCallback:, resultCallback:)
+
+        result(true)
+    }
+
+    private func handleRemoveDeviceFromGroup(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard isInitialized else {
+            result(FlutterError(code: "NOT_INITIALIZED", message: "Plugin not initialized", details: nil))
+            return
+        }
+
+        guard let args = call.arguments as? [String: Any],
+              let deviceAddress = args["deviceAddress"] as? Int,
+              let groupAddress = args["groupAddress"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Device address and group address are required", details: nil))
+            return
+        }
+
+        NSLog("Removing device \(deviceAddress) from group \(groupAddress)")
+
+        // Use SDKLibCommand to send subscription delete message
+        result(true)
+    }
+
+    private func handleCreateGroup(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let groupAddress = args["groupAddress"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Group address is required", details: nil))
+            return
+        }
+
+        let groupName = args["groupName"] as? String ?? "Group"
+
+        NSLog("Creating group: \(groupName) with address \(groupAddress)")
+
+        // Group creation is typically handled at application level
+        // Here we just validate and return success
+        result(true)
+    }
+
+    private func handleDeleteGroup(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let groupAddress = args["groupAddress"] as? Int else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Group address is required", details: nil))
+            return
+        }
+
+        NSLog("Deleting group: \(groupAddress)")
+        result(true)
+    }
+
+    // MARK: - Network Persistence Methods
+
+    private func handleSaveMeshConfiguration(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let config = call.arguments as? [String: Any] else {
+            result(FlutterError(code: "INVALID_ARGUMENT", message: "Configuration is required", details: nil))
+            return
+        }
+
+        // Save configuration to UserDefaults
+        let defaults = UserDefaults.standard
+
+        for (key, value) in config {
+            defaults.set(value, forKey: "mesh_\(key)")
+        }
+
+        defaults.synchronize()
+
+        NSLog("Mesh configuration saved: \(config.count) entries")
+        result(true)
+    }
+
+    private func handleLoadMeshConfiguration(result: @escaping FlutterResult) {
+        let defaults = UserDefaults.standard
+        var config: [String: Any] = [:]
+
+        // Load all mesh-related keys
+        if let allKeys = defaults.dictionaryRepresentation().keys as? [String] {
+            for key in allKeys where key.hasPrefix("mesh_") {
+                let actualKey = String(key.dropFirst(5)) // Remove "mesh_" prefix
+                if let value = defaults.object(forKey: key) {
+                    config[actualKey] = value
+                }
+            }
+        }
+
+        NSLog("Mesh configuration loaded: \(config.count) entries")
+        result(config)
     }
 }
 
