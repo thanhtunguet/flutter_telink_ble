@@ -62,11 +62,11 @@ class MockFlutterTelinkBlePlatform
 
   @override
   Stream<OTAProgress> get otaProgressStream => Stream.empty();
-
 }
 
 void main() {
-  final FlutterTelinkBlePlatform initialPlatform = FlutterTelinkBlePlatform.instance;
+  final FlutterTelinkBlePlatform initialPlatform =
+      FlutterTelinkBlePlatform.instance;
 
   test('$MethodChannelFlutterTelinkBle is the default instance', () {
     expect(initialPlatform, isInstanceOf<MethodChannelFlutterTelinkBle>());
