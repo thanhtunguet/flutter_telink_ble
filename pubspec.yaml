@@ -6,7 +6,7 @@ repository: https://github.com/thanhtunguet/flutter_telink_ble
 issue_tracker: https://github.com/thanhtunguet/flutter_telink_ble/issues
 
 environment:
-  sdk: ^3.6.2
+  sdk: "^3.2.0"
   flutter: ">=3.3.0"
 
 dependencies:
