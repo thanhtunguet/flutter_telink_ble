@@ -500,4 +500,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-Made with ❤️ by [Thanh Tung Nguyen](https://github.com/thanhtunguet)
+Made with ❤️ by [Thanh Tung Pham](https://github.com/thanhtunguet)
