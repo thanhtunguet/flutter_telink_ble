@@ -1,6 +1,6 @@
 name: flutter_telink_ble
 description: "A comprehensive Flutter plugin for Telink BLE Mesh devices, supporting device provisioning, mesh network management, device control, group operations, and OTA firmware updates."
-version: 0.0.1
+version: 0.0.1-rc01
 homepage: https://github.com/thanhtunguet/flutter_telink_ble
 repository: https://github.com/thanhtunguet/flutter_telink_ble
 issue_tracker: https://github.com/thanhtunguet/flutter_telink_ble/issues
